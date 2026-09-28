@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FFDS — Fraud Detection Console</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0B0F14;
+    --panel: #121821;
+    --panel-2: #161D27;
+    --border: #232C36;
+    --text: #E4E9EE;
+    --muted: #7C8A96;
+    --alert: #FF5D5D;
+    --alert-dim: #4A2226;
+    --safe: #2DD4A7;
+    --safe-dim: #163430;
+    --amber: #FFB020;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+  }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+
+  header {
+    padding: 28px 32px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--safe);
+    margin-bottom: 6px;
+  }
+  h1 {
+    font-size: 22px;
+    margin: 0;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .status-pill {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--safe);
+    box-shadow: 0 0 8px var(--safe);
+  }
+
+  main {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    padding: 24px 32px 60px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+  @media (max-width: 980px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .panel-title {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin: 0 0 16px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .btn-row { display: flex; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+  button {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+  }
+  button:hover { border-color: var(--safe); background: #182129; }
+  button:active { transform: translateY(1px); }
+  button.primary { border-color: var(--safe); color: var(--safe); }
+  button.danger { border-color: var(--alert); color: var(--alert); }
+
+  #sample-empty {
+    color: var(--muted);
+    font-size: 13px;
+    padding: 40px 0;
+    text-align: center;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .verdict-banner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 16px;
+    border-radius: 8px;
+    margin-bottom: 18px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .verdict-banner.fraud { background: var(--alert-dim); border: 1px solid var(--alert); }
+  .verdict-banner.normal { background: var(--safe-dim); border: 1px solid var(--safe); }
+  .verdict-label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .verdict-value { font-size: 18px; font-weight: 600; }
+  .verdict-value.fraud { color: var(--alert); }
+  .verdict-value.normal { color: var(--safe); }
+
+  .model-row { margin-bottom: 14px; }
+  .model-row-top {
+    display: flex; justify-content: space-between; margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .model-name { color: var(--text); font-weight: 500; }
+  .model-prob { font-family: 'IBM Plex Mono', monospace; color: var(--muted); }
+  .bar-track {
+    width: 100%; height: 8px; border-radius: 4px;
+    background: var(--panel-2); overflow: hidden;
+  }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.4s ease; }
+  .risk-explain {
+    font-size: 12px; color: var(--muted); margin: -8px 0 14px 0;
+  }
+
+  table.feat-table {
+    width: 100%; border-collapse: collapse;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    margin-top: 8px;
+  }
+  table.feat-table th, table.feat-table td {
+    text-align: left; padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+  }
+  table.feat-table th { color: var(--text); font-weight: 500; }
+
+  .metrics-table {
+    width: 100%; border-collapse: collapse;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+  .metrics-table th, .metrics-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  .metrics-table th {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--muted);
+    letter-spacing: 0.04em;
+  }
+  .metrics-table td { font-family: 'IBM Plex Mono', monospace; }
+  .metrics-table tr:last-child td { color: var(--safe); font-weight: 600; }
+
+  .metric-defs {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 24px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .metric-defs li {
+    padding-left: 14px;
+    position: relative;
+    line-height: 1.5;
+  }
+  .metric-defs li::before {
+    content: "›";
+    position: absolute;
+    left: 0;
+    color: var(--safe);
+  }
+  .metric-defs b { color: var(--text); }
+
+  .plot-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+  .plot-card {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+  }
+  .plot-card img {
+    width: 100%;
+    height: 260px;
+    object-fit: contain;
+    display: block;
+  }
+  .plot-caption {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding: 8px 10px;
+    background: var(--panel-2);
+    text-align: center;
+  }
+
+  .full-width { grid-column: 1 / -1; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">FFDS · Fraud Detection Research Stack</div>
+    <h1>Mamba-KAN + SNN Ensemble — Live Console</h1>
+  </div>
+  <div class="status-pill"><span class="dot"></span> Models loaded &middot; test set connected</div>
+</header>
+
+<main>
+  <div class="panel">
+    <p class="panel-title">Sample Inspector</p>
+    <div class="btn-row">
+      <button class="primary" onclick="fetchSample('/api/random_sample')">Pull random transaction</button>
+      <button class="danger" onclick="fetchSample('/api/fraud_sample')">Pull known fraud case</button>
+    </div>
+    <div id="sample-empty">No transaction loaded yet — pull one above.</div>
+    <div id="sample-content" style="display:none;">
+      <div id="verdict-banner" class="verdict-banner">
+        <div>
+          <div class="verdict-label">Ground truth label</div>
+          <div id="true-label" class="verdict-value mono">—</div>
+        </div>
+        <div style="text-align:right;">
+          <div class="verdict-label">Test index</div>
+          <div id="sample-idx" class="verdict-value mono">—</div>
+        </div>
+      </div>
+
+      <div id="model-rows"></div>
+
+      <p class="panel-title" style="margin-top:22px;">Why this score?</p>
+      <div id="explanation-summary" class="mono" style="font-size:13px; color:var(--text); background:var(--panel-2); border:1px solid var(--border); border-radius:6px; padding:10px 12px; margin-bottom:12px;"></div>
+      <div id="explanation-rows" style="margin-bottom:8px;"></div>
+
+      <p class="panel-title" style="margin-top:22px; display:flex; justify-content:space-between; align-items:center;">
+        <span>Latest transaction</span>
+        <button id="toggle-technical" onclick="toggleTechnical()" style="padding:4px 10px; font-size:11px;">Show technical (normalized) values</button>
+      </p>
+      <table class="feat-table" id="feat-table-plain">
+        <thead><tr><th>What we looked at</th><th>Value</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <table class="feat-table" id="feat-table" style="display:none;">
+        <thead><tr><th>Feature</th><th>Value (z-normalized)</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <p class="panel-title">Evaluation Report — Held-out Test Set</p>
+    <table class="metrics-table" id="metrics-table">
+      <thead>
+        <tr><th>Model</th><th>Precision</th><th>Recall</th><th>F1</th><th>ROC-AUC</th><th>PR-AUC</th></tr>
+      </thead>
+      <tbody>
+        {% for row in metrics_rows %}
+        <tr>
+          <td>{{ row['model'] }}</td>
+          <td>{{ row['precision'] }}</td>
+          <td>{{ row['recall'] }}</td>
+          <td>{{ row['f1'] }}</td>
+          <td>{{ row['roc_auc'] }}</td>
+          <td>{{ row['pr_auc'] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    <ul class="metric-defs">
+      <li><b>Precision</b> — of everything we flagged as fraud, how much really was</li>
+      <li><b>Recall</b> — of all real fraud, how much we actually caught</li>
+      <li><b>F1</b> — a single balance of precision and recall</li>
+      <li><b>ROC-AUC</b> — overall ranking quality across all possible cutoffs (higher = better)</li>
+      <li><b>PR-AUC</b> — same idea as ROC-AUC, but the fairer one when fraud is rare</li>
+    </ul>
+
+    <div class="plot-grid">
+      <div class="plot-card">
+        <img src="/results/eval_roc.png" alt="ROC curves">
+        <div class="plot-caption">ROC Curves</div>
+      </div>
+      <div class="plot-card">
+        <img src="/results/eval_pr.png" alt="Precision-Recall curves">
+        <div class="plot-caption">Precision-Recall Curves</div>
+      </div>
+      <div class="plot-card">
+        <img src="/results/eval_confusion.png" alt="Confusion matrices">
+        <div class="plot-caption">Confusion Matrices</div>
+      </div>
+      <div class="plot-card">
+        <img src="/results/feature_importance.png" alt="Feature importance">
+        <div class="plot-caption">Mamba-KAN Input Sensitivity</div>
+      </div>
+    </div>
+  </div>  <div class="panel full-width">
+    <p class="panel-title">Future Enhancements — Working Prototypes</p>
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+      <!-- GNN prototype -->
+      <div>
+        <div style="font-weight:600; margin-bottom:4px;">Graph Neural Network — Fraud Ring Detection</div>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:12px;">
+          {% if gnn_summary %}
+          Real device-sharing graph over real IEEE-CIS accounts and real fraud labels — no fabricated rings.
+          {% else %}
+          Run <code class="mono">python ring_fraud_gnn.py</code> in <code class="mono">src/enhancements/</code> to generate this.
+          {% endif %}
+        </div>
+        {% if gnn_summary %}
+        <table class="feat-table" style="margin-bottom:14px;">
+          <thead><tr><th></th><th>Mamba-KAN alone</th><th>GCN (graph)</th></tr></thead>
+          <tbody>
+            <tr><td>Avg. score — quiet ring members</td><td>{{ gnn_summary.mamba_kan_quiet_avg }}</td><td>{{ gnn_summary.gcn_quiet_avg }}</td></tr>
+            <tr><td>Avg. score — normal accounts</td><td>{{ gnn_summary.mamba_kan_normal_avg }}</td><td>{{ gnn_summary.gcn_normal_avg }}</td></tr>
+            <tr><td>Separation (higher = better)</td><td>{{ gnn_summary.mamba_kan_separation }}</td><td>{{ gnn_summary.gcn_separation }}</td></tr>
+          </tbody>
+        </table>
+        <div class="plot-card">
+          <img src="/results/enhancements/gnn_ring_detection.png" alt="GNN ring detection">
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Concept drift prototype -->
+      <div>
+        <div style="font-weight:600; margin-bottom:4px;">Concept Drift Detection</div>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:12px;">
+          {% if drift_summary %}
+          Real chronological split of IEEE-CIS transactions — earliest 70% vs. most recent 30%, no fabricated scenario.
+          {% else %}
+          Run <code class="mono">python concept_drift.py</code> in <code class="mono">src/enhancements/</code> to generate this.
+          {% endif %}
+        </div>
+        {% if drift_summary %}
+        <table class="feat-table" style="margin-bottom:14px;">
+          <thead><tr><th>Metric</th><th>Baseline (earlier)</th><th>Recent (later, no retraining)</th></tr></thead>
+          <tbody>
+            <tr><td>Recall</td><td>{{ drift_summary.baseline_recall }}</td><td style="color:var(--alert);">{{ drift_summary.drifted_recall }}</td></tr>
+            <tr><td>Precision</td><td>{{ drift_summary.baseline_precision }}</td><td>{{ drift_summary.drifted_precision }}</td></tr>
+            <tr><td>F1</td><td>{{ drift_summary.baseline_f1 }}</td><td>{{ drift_summary.drifted_f1 }}</td></tr>
+            <tr><td colspan="2">Top drifted feature (PSI)</td><td style="color:var(--alert);">{{ drift_summary.top_drifted_feature }} = {{ drift_summary.top_drifted_feature_psi }}</td></tr>
+          </tbody>
+        </table>
+                <div class="plot-card">
+          <img src="/results/enhancements/concept_drift_detection.png" alt="Concept drift detection">
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Cold-start prototype -->
+      <div>
+        <div style="font-weight:600; margin-bottom:4px;">Cold-Start Handling — New Account Routing</div>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:12px;">
+          {% if cold_start_summary %}
+          Real first 1–9 transactions of real IEEE-CIS accounts — no simulated "cold" data.
+          {% else %}
+          Run <code class="mono">python cold_start.py</code> in <code class="mono">src/enhancements/</code> to generate this.
+          {% endif %}
+        </div>
+        {% if cold_start_summary %}
+        <table class="feat-table" style="margin-bottom:14px;">
+          <thead><tr><th></th><th>Random Forest</th><th>Mamba-KAN</th></tr></thead>
+          <tbody>
+            <tr><td>PR-AUC — cold-start (&lt;10 tx history)</td><td>{{ cold_start_summary.overall.random_forest_coldstart.pr_auc }}</td><td>{{ cold_start_summary.overall.mamba_kan_coldstart.pr_auc }}</td></tr>
+            <tr><td>PR-AUC — mature (full history)</td><td>{{ cold_start_summary.overall.random_forest_mature_reference.pr_auc }}</td><td>{{ cold_start_summary.overall.mamba_kan_mature_reference.pr_auc }}</td></tr>
+            <tr><td>Recall — cold-start</td><td>{{ cold_start_summary.overall.random_forest_coldstart.recall }}</td><td>{{ cold_start_summary.overall.mamba_kan_coldstart.recall }}</td></tr>
+            <tr><td colspan="2">Cold-start test examples</td><td>{{ cold_start_summary.n_coldstart_test }}</td></tr>
+          </tbody>
+        </table>
+        <div class="plot-card">
+          <img src="/results/enhancements/cold_start_detection.png" alt="Cold-start detection by history length">
+        </div>
+        {% endif %}
+      </div>
+
+      <!-- Risk scoring prototype -->
+      <div>
+        <div style="font-weight:600; margin-bottom:4px;">Risk Scoring — LOW / MEDIUM / HIGH</div>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:12px;">
+          {% if risk_scoring_summary %}
+          Thresholds chosen from validation-set behavior, checked for calibration on the untouched test set.
+          {% else %}
+          Run <code class="mono">python risk_scoring.py</code> in <code class="mono">src/</code> to generate this.
+          {% endif %}
+        </div>
+        {% if risk_scoring_summary %}
+        <table class="feat-table" style="margin-bottom:14px;">
+          <thead><tr><th>Bucket</th><th>Test count</th><th>Empirical fraud rate</th></tr></thead>
+          <tbody>
+            <tr><td>LOW</td><td>{{ risk_scoring_summary.test_calibration.LOW.n }}</td><td>{{ risk_scoring_summary.test_calibration.LOW.fraud_rate }}</td></tr>
+            <tr><td>MEDIUM</td><td>{{ risk_scoring_summary.test_calibration.MEDIUM.n }}</td><td>{{ risk_scoring_summary.test_calibration.MEDIUM.fraud_rate }}</td></tr>
+            <tr><td>HIGH</td><td>{{ risk_scoring_summary.test_calibration.HIGH.n }}</td><td>{{ risk_scoring_summary.test_calibration.HIGH.fraud_rate }}</td></tr>
+            <tr><td colspan="2">Fraud coverage if reviewing MEDIUM+HIGH only</td><td>{{ risk_scoring_summary.fraud_coverage_medium_plus_high }}</td></tr>
+            <tr><td colspan="2">Share of all transactions needing review</td><td>{{ risk_scoring_summary.volume_share_medium_plus_high }}</td></tr>
+          </tbody>
+        </table>
+        <div class="plot-card">
+          <img src="/results/enhancements/risk_scoring_calibration.png" alt="Risk bucket calibration">
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+const MODEL_COLORS = {
+  "Mamba-KAN": "#2DD4A7",
+  "SNN (rate coding)": "#FFB020",
+  "SNN (latency coding)": "#5B9CFF",
+  "Ensemble": "#FF5D5D",
+};
+
+let lastSampleData = null;
+
+async function fetchSample(url) {
+  const res = await fetch(url);
+  const data = await res.json();
+  lastSampleData = data;
+  renderSample(data);
+}
+
+function toggleTechnical() {
+  const plain = document.getElementById('feat-table-plain');
+  const tech = document.getElementById('feat-table');
+  const btn = document.getElementById('toggle-technical');
+  const showingPlain = plain.style.display !== 'none';
+  plain.style.display = showingPlain ? 'none' : '';
+  tech.style.display = showingPlain ? '' : 'none';
+  btn.textContent = showingPlain ? 'Show plain-English values' : 'Show technical (normalized) values';
+}
+
+function renderSample(data) {
+  document.getElementById('sample-empty').style.display = 'none';
+  document.getElementById('sample-content').style.display = 'block';
+
+  const isFraud = data.true_label === 1;
+  const banner = document.getElementById('verdict-banner');
+  banner.className = 'verdict-banner ' + (isFraud ? 'fraud' : 'normal');
+  const trueLabelEl = document.getElementById('true-label');
+  trueLabelEl.textContent = isFraud ? 'FRAUD' : 'NORMAL';
+  trueLabelEl.className = 'verdict-value mono ' + (isFraud ? 'fraud' : 'normal');
+  document.getElementById('sample-idx').textContent = '#' + data.index;
+
+  const RISK_COLORS = { "LOW": "#2DD4A7", "MEDIUM": "#FFB020", "HIGH": "#FF5D5D" };
+
+  const rows = document.getElementById('model-rows');
+  rows.innerHTML = '';
+  for (const [name, prob] of Object.entries(data.predictions)) {
+    const pct = Math.round(prob * 100);
+    const color = MODEL_COLORS[name] || '#7C8A96';
+    let badge = '';
+    if (name === 'Ensemble' && data.risk_level) {
+      const rc = RISK_COLORS[data.risk_level] || '#7C8A96';
+      badge = `<span class="mono" style="margin-left:8px; padding:2px 8px; border-radius:10px; font-size:11px; font-weight:700; color:#0B0E11; background:${rc};">${data.risk_level} RISK</span>`;
+    }
+    rows.innerHTML += `
+      <div class="model-row">
+        <div class="model-row-top">
+          <span class="model-name">${name}${badge}</span>
+          <span class="model-prob">${pct}% fraud probability</span>
+        </div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${pct}%; background:${color};"></div>
+        </div>
+      </div>`;
+    if (name === 'Ensemble' && data.risk_explain) {
+      rows.innerHTML += `<div class="risk-explain">${data.risk_explain}</div>`;
+    }
+  }
+
+  // Plain-English feature table (default view)
+  const plainBody = document.querySelector('#feat-table-plain tbody');
+  plainBody.innerHTML = '';
+  (data.plain_features || []).forEach(f => {
+    plainBody.innerHTML += `<tr><td>${f.label}</td><td>${f.plain_value}</td></tr>`;
+  });
+
+  // Technical z-normalized table (behind the toggle)
+  const lastRow = data.window[data.window.length - 1];
+  const tbody = document.querySelector('#feat-table tbody');
+  tbody.innerHTML = '';
+  data.feature_names.forEach((name, i) => {
+    tbody.innerHTML += `<tr><td>${name}</td><td>${lastRow[i].toFixed(3)}</td></tr>`;
+  });
+
+  // "Why this score?" summary sentence
+  const summaryEl = document.getElementById('explanation-summary');
+  summaryEl.textContent = data.explanation_summary || '';
+
+  const expRows = document.getElementById('explanation-rows');
+  expRows.innerHTML = '';
+  if (data.explanation && data.explanation.length > 0) {
+    const maxAbs = Math.max(...data.explanation.map(e => Math.abs(e.contribution)), 0.0001);
+    data.explanation.forEach(e => {
+      const pushesFraud = e.contribution > 0;
+      const color = pushesFraud ? '#FF5D5D' : '#2DD4A7';
+      const tag = pushesFraud ? 'FRAUD ↑' : 'NORMAL ↑';
+      const widthPct = Math.round((Math.abs(e.contribution) / maxAbs) * 100);
+      expRows.innerHTML += `
+        <div class="model-row">
+          <div class="model-row-top">
+            <span class="model-name">${e.label}: <span style="color:var(--text); font-weight:400;">${e.plain_value}</span></span>
+            <span class="model-prob" style="color:${color}; font-weight:600;">${tag}</span>
+          </div>
+          <div class="bar-track">
+            <div class="bar-fill" style="width:${widthPct}%; background:${color};"></div>
+          </div>
+        </div>`;
+    });
+  } else {
+    expRows.innerHTML = '<div style="color:var(--muted); font-size:13px;">No explanation available.</div>';
+  }
+}
+</script>
+
+</body>
+</html>
